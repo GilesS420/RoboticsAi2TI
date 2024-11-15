@@ -25,57 +25,38 @@ class  Lidar(Node):
         self.cmd = Twist()
         self.timer = self.create_timer(self.timer_period, self.motion)
 
-    def laser_callback(self,msg):
-        # Save the frontal laser scan info at 0°
+    def laser_callback(self, msg):
         self.laser_forward = msg.ranges[359] 
-        self.laser_left = min (msg.ranges[0:90])
-        self.laser_right = min(msg.ranges[269:359])
-        self.safe_distance= 1.0
+        self.laser_left = min([r for r in msg.ranges[0:30] if r != float('inf')], default=float('inf'))
+        self.laser_right = min([r for r in msg.ranges[269:359] if r != float('inf')], default=float('inf'))
+        self.safe_distance = 0.5
 
-        self.inf_distance = float('inf')
-
-        
-        
-        
     def motion(self):
-        # print the data
-        self.get_logger().info('I receive: "%s"' % str(self.laser_forward))
-        self.get_logger().info('On my left :"%s"' % str(self.laser_left))
-        self.get_logger().info('On my right :"%s"' % str(self.laser_right))
-        # Logic of move
-        if self.laser_forward >1:
-            self.cmd.linear.x = 0.2  #move vooruit 
-            self.cmd.angular.z= 0.0
-       
-        if (self.laser_left < 1):
-            self.cmd.linear.x = 0.1
-            self.cmd.angular.z = -0.5  #move right when the left side is smaller than 1
-        if (self.laser_right <1):
-            self.cmd.linear.x =0.1
-            self.cmd.angular.z = 0.5  #move left when the right side is smaller than 1
+        self.get_logger().info('Laser forward: "%s"' % str(self.laser_forward))
+        self.get_logger().info('Laser left: "%s"' % str(self.laser_left))
+        self.get_logger().info('Laser right: "%s"' % str(self.laser_right))
 
-        if (self.laser_forward > self.safe_distance):  # blijf vooruit bewegen
-            self.cmd.linear.x= 0.2 
-            self.cmd.angular.z= 0.0
+        ## Default 
+        self.cmd.linear.x = 0.5
+        self.cmd.angular.z = 0.0
+        ##
 
-        elif(self.laser_left > self.laser_forward and self.laser_left > self.safe_distance): #meer plaats links dan voorwaards en het is vijlig --> move left
-            self.cmd.linear.x = 0.1
-            self.cmd.angular.z= -0.2
-
-        elif(self.laser_right > self.laser_forward and self.laser_left > self.safe_distance): #meer plaats rechts dan voorwaards en het is vijlig --> move right
-            self.cmd.linear.x = 0.1
-            self.cmd.angular.z= 0.2
-
-        elif(self.laser_left == self.laser_forward and self.laser_right == self.laser_forward): #move vooruit 
-            self.cmd.linear.x = 0.2  
-            self.cmd.angular.z= 0.0
-        else:
-            if (self.laser_forward <1 and self.laser_forward >= 0.4):
-                self.cmd.linear.x = 0.1
+        if self.laser_forward < self.safe_distance:
+            if self.laser_left > self.laser_right:
+                self.cmd.linear.x = 0.0
                 self.cmd.angular.z = 0.5
             else:
                 self.cmd.linear.x = 0.0
-                self.cmd.angular.z = 0.1
+                self.cmd.angular.z = -0.5
+        elif self.laser_left < (self.safe_distance):
+            self.cmd.linear.x = 0.0
+            self.cmd.angular.z = -0.3  
+        elif self.laser_right < (self.safe_distance):
+            self.cmd.linear.x = 0.0
+            self.cmd.angular.z = 0.3  
+        else:
+            self.cmd.linear.x = 0.5
+            self.cmd.angular.z = 0.0
 
 
         # Publishing the cmd_vel values to a Topic
