@@ -26,7 +26,7 @@ class Stop(Node):
         self.timer = self.create_timer(timer_period, self.motion)
 
     def laser_callback(self, msg):
-        self.laser_forward = msg.ranges[359] 
+        self.laser_forward = msg.ranges[0] 
         self.laser_left = min([r for r in msg.ranges[0:45] if r != float('inf')], default=float('inf'))
         self.laser_right = min([r for r in msg.ranges[-45:] if r != float('inf')], default=float('inf'))
         self.safe_distance = 0.5
@@ -37,11 +37,11 @@ class Stop(Node):
         self.get_logger().info('Laser right: "%s"' % str(self.laser_right))
 
 
-        if self.laser_forward <0.5:
+        if self.laser_forward <0.3:
             self.cmd.linear.x = 0.0
             self.cmd.angular.z=0.0
         else:
-            self.cmd.linear.x=0.4
+            self.cmd.linear.x=0.2
             self.cmd.angular.z=0.0
 
         self.publisher_.publish(self.cmd)
